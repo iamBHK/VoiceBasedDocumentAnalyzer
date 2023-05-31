@@ -73,41 +73,98 @@ agent_executor = create_vectorstore_agent(
 )
 st.text("Alright, I've studied. How can I help you with this document.")
 st.subheader('OpenAI 🦜🔗 Document Analyzer')
-talk("Alright, I've studied. How can I help you with this document.")
-# Next step : talk("Alright, I've studied. Now, you can either type or ask me. How would you like to proceed.")
+# Previous step : talk("Alright, I've studied. How can I help you with this document.")
+talk("Alright, I've studied. Now, you can either type or say your question")
 
-
-def Enumerate():
-    # Create a text input box for the user
+def ExecutionMethod():
+    talk("You've 3 seconds to choose.")
     with speech.Microphone() as source:
         s_to_t = listener.listen(source)
         act_command = listener.recognize_google(s_to_t)
         prompt = act_command.lower()
-        # prompt = st.text_input(act_command)
-        # print("prompt: ", prompt)
-        print("Asked: ", prompt)
+        
+        if 'type' in prompt:
+            print("Asked: ", prompt)
+            talk("Alright! Moving to type mode.")
+            TypeMe()
+
+        elif 'voice' in prompt:
+            st.text('Moving with voice mode')
+            AskMe()
+
+        else:
+            talk("Sorry, I couldn't catch it. Please say again.")
+            ExecutionMethod()
+
+
+
+def TypeMe():
+    TypedPrompt = st.text_input('Input your prompt here')
+    # If the user hits enter
+    if TypedPrompt:
+        Enumerate()
+    
+    else:
+        TypeMe()
+
+
+def AskMe():
+    talk("Got you, opted voice mode. Please ask me your question.")
+    with speech.Microphone() as source:
+        s_to_t = listener.listen(source)
+        try:
+            act_command = listener.recognize_google(s_to_t, show_all=True)
+            VoicePrompt = act_command.lower()
+            # prompt = st.text_input(act_command)
+            # print("prompt: ", prompt)
+            st.text("You've asked : ", VoicePrompt)
+            Enumerate()
+        
+        except Exception as e:
+            st.text(e)
+            # print(e)
+
+def Enumerate():
+    if TypedPrompt is not None:
+        FinalPrompt = TypedPrompt
+
+    elif VoicePrompt is not None:
+        FinalPrompt = VoicePrompt
+    
+    else:
+        talk("Sorry, let's try again")
+        ExecutionMethod()
+
+    # # Create a text input box for the user
+    # with speech.Microphone() as source:
+    #     s_to_t = listener.listen(source)
+    #     act_command = listener.recognize_google(s_to_t)
+    #     prompt = act_command.lower()
+    #     # prompt = st.text_input(act_command)
+    #     # print("prompt: ", prompt)
+    #     print("Asked: ", prompt)
                     
         # prompt = st.text_input('Input your prompt here')
         
         # # If the user hits enter
         # if prompt:
         # Then pass the prompt to the LLM
-        response = agent_executor.run(prompt)
-        # ...and write it out to the screen
-        st.write(response)
-        
+    response = agent_executor.run(FinalPrompt)
+    # ...and write it out to the screen
+    st.write(response)
+    
 
-        # With a streamlit expander  
-        with st.expander('Document Similarity Search'):
-            # Find the relevant pages
-            search = store.similarity_search_with_score(prompt) 
-            # Write out the first 
-            st.write(search[0][0].page_content) 
+    # With a streamlit expander  
+    with st.expander('Document Similarity Search'):
+        # Find the relevant pages
+        search = store.similarity_search_with_score(FinalPrompt) 
+        # Write out the first 
+        st.write(search[0][0].page_content) 
         talk(response)
 
-        # else:
-        #         pass
-        
+    # else:
+    #         pass
+    
 
 while True:
-    Enumerate()
+    ExecutionMethod()
